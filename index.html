@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thống kê trạng thái tìm minh chứng</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <!-- SheetJS (để đọc Excel trực tiếp từ trình duyệt) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+    <style>
+        body { background-color: #f0f4f8; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .card { background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); padding: 20px; }
+        .header-bg { background-color: #1e40af; color: white; padding: 15px; border-radius: 8px; text-align: center; }
+        .tc-table th { background-color: #f3f4f6; padding: 8px; border: 1px solid #e5e7eb; font-size: 14px; text-align: center; }
+        .tc-table td { padding: 8px; border: 1px solid #e5e7eb; font-size: 14px; text-align: center; }
+        #loading { position: fixed; top: 0; left: 0; w-full: 100%; height: 100%; background: rgba(255,255,255,0.9); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px;}
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="p-6 relative">
+    
+    <!-- Màn hình chờ tải dữ liệu -->
+    <div id="loading">
+        <div class="spinner"></div>
+        <h2 class="text-xl font-bold text-blue-800">Đang kéo dữ liệu mới nhất từ Google Sheets...</h2>
+        <p class="text-gray-500 mt-2">Vui lòng chờ vài giây (Real-time update)</p>
+    </div>
+
+    <div class="max-w-7xl mx-auto space-y-6" id="dashboard" style="display: none;">
+        <div class="header-bg">
+            <h1 class="text-2xl font-bold">THỐNG KÊ TRẠNG THÁI TÌM MINH CHỨNG THEO TIÊU CHUẨN, TIÊU CHÍ</h1>
+            <p class="text-sm mt-1">Tổng số: <b id="totalMC">0</b> mã minh chứng (MC)</p>
+        </div>
+
+        <div class="card">
+            <h2 class="text-lg font-bold mb-4 text-gray-700 uppercase">Tổng quan trạng thái toàn bộ minh chứng</h2>
+            <div class="grid grid-cols-5 gap-4">
+                <div class="bg-green-100 p-4 rounded-lg text-center border border-green-200">
+                    <div class="text-3xl font-bold text-green-700" id="cardXong">0</div>
+                    <div class="text-green-800 font-semibold">Xong</div>
+                    <div class="text-sm text-green-600" id="percentXong">0%</div>
+                </div>
+                <div class="bg-yellow-100 p-4 rounded-lg text-center border border-yellow-200">
+                    <div class="text-3xl font-bold text-yellow-700" id="cardChuaDu">0</div>
+                    <div class="text-yellow-800 font-semibold">Chưa đủ</div>
+                    <div class="text-sm text-yellow-600" id="percentChuaDu">0%</div>
+                </div>
+                <div class="bg-red-100 p-4 rounded-lg text-center border border-red-200">
+                    <div class="text-3xl font-bold text-red-700" id="cardTimChuaCo">0</div>
+                    <div class="text-red-800 font-semibold">Tìm chưa có</div>
+                    <div class="text-sm text-red-600" id="percentTimChuaCo">0%</div>
+                </div>
+                <div class="bg-gray-100 p-4 rounded-lg text-center border border-gray-300">
+                    <div class="text-3xl font-bold text-gray-700" id="cardChuaCapNhat">0</div>
+                    <div class="text-gray-800 font-semibold">Chưa cập nhật</div>
+                    <div class="text-sm text-gray-600" id="percentChuaCapNhat">0%</div>
+                </div>
+                <div class="bg-blue-50 p-4 rounded-lg text-center border border-blue-200 flex flex-col justify-center">
+                    <div class="text-3xl font-bold text-blue-800" id="cardTotal">0</div>
+                    <div class="text-blue-800 font-semibold">Tổng MC</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-6">
+            <div class="card">
+                <h2 class="text-lg font-bold mb-4 text-gray-700 uppercase text-center">Cơ cấu trạng thái</h2>
+                <div style="height: 300px; display: flex; justify-content: center;">
+                    <canvas id="donutChart"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <h2 class="text-lg font-bold mb-4 text-gray-700 uppercase text-center">Tiến độ theo tiêu chuẩn</h2>
+                <div style="height: 300px;">
+                    <canvas id="barChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 class="text-lg font-bold mb-4 text-gray-700 uppercase">Chi tiết theo từng tiêu chí</h2>
+            <div class="grid grid-cols-4 gap-4" id="detailTables">
+                <!-- Bảng chi tiết sinh ra bằng JS -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Gọi đến API Proxy nội bộ của Vercel để lấy dữ liệu Excel
+        const proxyUrl = "/api/proxy";
+
+        const phuTrach = {
+            "TC1": "Thầy Hà, Thầy Thọ",
+            "TC2": "Thầy Thành, Lên",
+            "TC3": "Thầy Bảo, thầy Vũ",
+            "TC4": "Kiệt, thầy Thành Phương",
+            "TC5": "Cô Chi, thầy Xuân",
+            "TC6": "Thầy Lương, cô Dịu",
+            "TC7": "Thầy Thọ, thầy Kha",
+            "TC8": "Thầy Kiên, thầy Đức"
+        };
+
+        async function loadData() {
+            try {
+                const response = await fetch(proxyUrl);
+                const arrayBuffer = await response.arrayBuffer();
+                
+                // Đọc file Excel
+                const workbook = XLSX.read(arrayBuffer, {type: 'array'});
+                const sheetName = 'MC KTPM v3';
+                if (!workbook.Sheets[sheetName]) {
+                    alert("Không tìm thấy sheet 'MC KTPM v3' trong file Excel!");
+                    return;
+                }
+                const worksheet = workbook.Sheets[sheetName];
+                const rawData = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+
+                processData(rawData);
+            } catch (error) {
+                console.error("Lỗi khi kéo dữ liệu:", error);
+                alert("Lỗi khi lấy dữ liệu từ Google Drive. Vui lòng kiểm tra lại quyền truy cập link!");
+                document.getElementById('loading').innerHTML = `<h2 class="text-red-600 font-bold">Lỗi kết nối. Hãy f5 tải lại trang.</h2>`;
+            }
+        }
+
+        function processData(rows) {
+            let dataList = [];
+            let currentTieuChi = null;
+
+            // Bỏ qua dòng tiêu đề (bắt đầu từ dòng 1 vì mảng 0-indexed)
+            for (let i = 1; i < rows.length; i++) {
+                let row = rows[i];
+                let tieuChiCell = row[0];
+                let maMcCell = row[1];
+                let checkListCell = row[5];
+
+                if (tieuChiCell && typeof tieuChiCell === 'string') {
+                    let text = tieuChiCell.trim();
+                    if (text.toLowerCase().startsWith('tiêu chí')) {
+                        currentTieuChi = text.replace(/tiêu chí/i, '').trim();
+                    }
+                }
+
+                if (maMcCell && String(maMcCell).trim() !== "") {
+                    let tieuChuan = 'TC?';
+                    if (currentTieuChi) {
+                        let tcNum = currentTieuChi.split('.')[0];
+                        tieuChuan = `TC${tcNum}`;
+                    }
+
+                    let status = "Chưa cập nhật";
+                    if (checkListCell) {
+                        let statusStr = String(checkListCell).trim();
+                        if (["Xong", "Chưa đủ", "Tìm chưa có"].includes(statusStr)) {
+                            status = statusStr;
+                        }
+                    }
+
+                    dataList.push({
+                        TieuChuan: tieuChuan,
+                        TieuChi: currentTieuChi,
+                        TrangThai: status
+                    });
+                }
+            }
+
+            renderDashboard(dataList);
+        }
+
+        function renderDashboard(dataList) {
+            let total = dataList.length;
+            let statusCounts = {"Xong": 0, "Chưa đủ": 0, "Tìm chưa có": 0, "Chưa cập nhật": 0};
+            
+            let tcStats = {};
+            let chiStats = {};
+            let tcSet = new Set();
+
+            dataList.forEach(item => {
+                let status = item.TrangThai;
+                let tc = item.TieuChuan;
+                let chi = item.TieuChi;
+
+                statusCounts[status]++;
+                tcSet.add(tc);
+
+                if (!tcStats[tc]) tcStats[tc] = {"Tổng": 0, "Xong": 0, "Chưa đủ": 0, "Tìm chưa có": 0, "Chưa cập nhật": 0};
+                tcStats[tc]["Tổng"]++;
+                tcStats[tc][status]++;
+
+                if (!chiStats[tc]) chiStats[tc] = {};
+                if (!chiStats[tc][chi]) chiStats[tc][chi] = {"X": 0, "Đ": 0, "C": 0, "?": 0, "Tổng": 0};
+                chiStats[tc][chi]["Tổng"]++;
+                if (status === "Xong") chiStats[tc][chi]["X"]++;
+                else if (status === "Chưa đủ") chiStats[tc][chi]["Đ"]++;
+                else if (status === "Tìm chưa có") chiStats[tc][chi]["C"]++;
+                else chiStats[tc][chi]["?"]++;
+            });
+
+            // Update KPI Cards
+            document.getElementById('totalMC').innerText = total;
+            document.getElementById('cardTotal').innerText = total;
+            
+            ['Xong', 'Chưa đủ', 'Tìm chưa có', 'Chưa cập nhật'].forEach(st => {
+                let idName = st.replace(/ /g, '');
+                idName = idName.charAt(0).toUpperCase() + idName.slice(1);
+                // special case for 'Tìm chưa có' -> TimChuaCo
+                if (st === 'Tìm chưa có') idName = 'TimChuaCo';
+                if (st === 'Chưa đủ') idName = 'ChuaDu';
+                if (st === 'Chưa cập nhật') idName = 'ChuaCapNhat';
+
+                document.getElementById(`card${idName}`).innerText = statusCounts[st];
+                let percent = total > 0 ? (statusCounts[st] / total * 100).toFixed(1) : 0;
+                document.getElementById(`percent${idName}`).innerText = `${percent}%`;
+            });
+
+            // Draw Charts
+            Chart.register(ChartDataLabels);
+
+            // Donut
+            new Chart(document.getElementById('donutChart').getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Xong', 'Chưa đủ', 'Tìm chưa có', 'Chưa cập nhật'],
+                    datasets: [{
+                        data: [statusCounts["Xong"], statusCounts["Chưa đủ"], statusCounts["Tìm chưa có"], statusCounts["Chưa cập nhật"]],
+                        backgroundColor: ['#22c55e', '#eab308', '#ef4444', '#9ca3af']
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right' },
+                        datalabels: {
+                            color: '#fff', font: { weight: 'bold' },
+                            formatter: (value, ctx) => {
+                                if (value === 0) return "";
+                                let sum = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                return (value * 100 / sum).toFixed(1) + "%";
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Bar
+            let tcList = Array.from(tcSet).sort((a,b) => {
+                let numA = parseInt(a.replace('TC',''));
+                let numB = parseInt(b.replace('TC',''));
+                return numA - numB;
+            });
+
+            let dataX = tcList.map(tc => tcStats[tc]['Xong']);
+            let dataD = tcList.map(tc => tcStats[tc]['Chưa đủ']);
+            let dataC = tcList.map(tc => tcStats[tc]['Tìm chưa có']);
+            let dataQ = tcList.map(tc => tcStats[tc]['Chưa cập nhật']);
+
+            new Chart(document.getElementById('barChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: tcList,
+                    datasets: [
+                        { label: 'Xong', data: dataX, backgroundColor: '#22c55e' },
+                        { label: 'Chưa đủ', data: dataD, backgroundColor: '#eab308' },
+                        { label: 'Tìm chưa có', data: dataC, backgroundColor: '#ef4444' },
+                        { label: 'Chưa cập nhật', data: dataQ, backgroundColor: '#9ca3af' }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+                    scales: { x: { stacked: true }, y: { stacked: true } },
+                    plugins: { datalabels: { display: false } }
+                }
+            });
+
+            // Detail Tables
+            let detailContainer = document.getElementById('detailTables');
+            detailContainer.innerHTML = "";
+            tcList.forEach(tc => {
+                let phuTrachText = phuTrach[tc] ? ` - Phụ trách: ${phuTrach[tc]}` : "";
+                let thead = `<table class="tc-table w-full mb-4">
+                                <thead>
+                                    <tr>
+                                        <th colspan="6" class="bg-blue-100 text-blue-800">
+                                            <div class="font-bold">${tc} (Tổng ${tcStats[tc]['Tổng']} MC)</div>
+                                            <div class="text-xs text-blue-600 font-normal mt-1">${phuTrachText}</div>
+                                        </th>
+                                    </tr>
+                                    <tr><th>Tiêu chí</th><th>Tổng</th><th>X</th><th>Đ</th><th>C</th><th>?</th></tr>
+                                </thead><tbody>`;
+                
+                let tbody = '';
+                if(chiStats[tc]) {
+                    let chis = Object.keys(chiStats[tc]).sort((a,b) => parseFloat(a) - parseFloat(b));
+                    chis.forEach(chi => {
+                        let c = chiStats[tc][chi];
+                        tbody += `<tr>
+                            <td class="font-bold">${chi}</td>
+                            <td>${c['Tổng']}</td>
+                            <td class="text-green-600">${c['X']}</td>
+                            <td class="text-yellow-600">${c['Đ']}</td>
+                            <td class="text-red-600">${c['C']}</td>
+                            <td class="text-gray-500">${c['?']}</td>
+                        </tr>`;
+                    });
+                }
+                
+                let tfoot = `<tr class="font-bold bg-gray-50">
+                                <td>Tổng</td>
+                                <td>${tcStats[tc]['Tổng']}</td>
+                                <td class="text-green-600">${tcStats[tc]['Xong']}</td>
+                                <td class="text-yellow-600">${tcStats[tc]['Chưa đủ']}</td>
+                                <td class="text-red-600">${tcStats[tc]['Tìm chưa có']}</td>
+                                <td class="text-gray-500">${tcStats[tc]['Chưa cập nhật']}</td>
+                            </tr></tbody></table>`;
+                
+                detailContainer.innerHTML += `<div>${thead}${tbody}${tfoot}</div>`;
+            });
+
+            // Hide loading, show dashboard
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+        }
+
+        // Khởi động
+        window.onload = () => {
+            loadData();
+            // Tự động làm mới dữ liệu ngầm mỗi 60 giây (tùy chọn)
+            setInterval(() => {
+                console.log("Đang làm mới dữ liệu...");
+                // loadData(); // Bỏ comment dòng này nếu muốn web tự giật tải lại liên tục
+            }, 60000);
+        };
+    </script>
+</body>
+</html>
