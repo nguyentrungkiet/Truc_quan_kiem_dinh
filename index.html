@@ -330,11 +330,13 @@
         // Khởi động
         window.onload = () => {
             loadData();
-            // Tự động làm mới dữ liệu ngầm mỗi 60 giây (tùy chọn)
+            
+            // Tự động tải lại dữ liệu ngầm mà không cần F5 trang (Mỗi 3 phút = 180,000 ms)
+            // Lưu ý: Không nên để quá nhanh (ví dụ 10s) vì Vercel giới hạn số lần gọi API miễn phí mỗi tháng
             setInterval(() => {
-                console.log("Đang làm mới dữ liệu...");
-                // loadData(); // Bỏ comment dòng này nếu muốn web tự giật tải lại liên tục
-            }, 60000);
+                console.log("Đang lấy số liệu mới nhất...");
+                loadData(); 
+            }, 180000);
         };
     </script>
 </body>
