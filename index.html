@@ -40,7 +40,7 @@
 
         <div class="card">
             <h2 class="text-lg font-bold mb-4 text-gray-700 uppercase">Tổng quan trạng thái toàn bộ minh chứng</h2>
-            <div class="grid grid-cols-5 gap-4">
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 <div class="bg-green-100 p-4 rounded-lg text-center border border-green-200">
                     <div class="text-3xl font-bold text-green-700" id="cardXong">0</div>
                     <div class="text-green-800 font-semibold">Xong</div>
@@ -68,7 +68,7 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div class="card">
                 <h2 class="text-lg font-bold mb-4 text-gray-700 uppercase text-center">Cơ cấu trạng thái</h2>
                 <div style="height: 300px; display: flex; justify-content: center;">
@@ -85,7 +85,7 @@
 
         <div class="card">
             <h2 class="text-lg font-bold mb-4 text-gray-700 uppercase">Chi tiết theo từng tiêu chí</h2>
-            <div class="grid grid-cols-4 gap-4" id="detailTables">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="detailTables">
                 <!-- Bảng chi tiết sinh ra bằng JS -->
             </div>
         </div>
@@ -319,7 +319,7 @@
                                 <td class="text-gray-500">${tcStats[tc]['Chưa cập nhật']}</td>
                             </tr></tbody></table>`;
                 
-                detailContainer.innerHTML += `<div>${thead}${tbody}${tfoot}</div>`;
+                detailContainer.innerHTML += `<div class="overflow-x-auto rounded-lg border border-gray-200">${thead}${tbody}${tfoot}</div>`;
             });
 
             // Hide loading, show dashboard
