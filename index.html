@@ -561,20 +561,27 @@
                 
                 if(driveData.error) throw new Error(driveData.error);
 
-                let emptyXong = [];
+                let emptyByTC = {};
+                let totalEmpty = 0;
+                
                 dataList.forEach(item => {
                     if (item.TrangThai === 'Xong') {
                         let count = driveData[item.MaMC];
                         // Nếu API trả về 0 file (hoặc không tìm thấy thư mục)
                         if (count === 0 || count === undefined) {
-                            emptyXong.push(item.MaMC);
+                            let tcMatch = item.MaMC.match(/^H(\d+)/);
+                            if (tcMatch) {
+                                let tc = "TC" + tcMatch[1];
+                                emptyByTC[tc] = (emptyByTC[tc] || 0) + 1;
+                                totalEmpty++;
+                            }
                         }
                     }
                 });
 
-                if (emptyXong.length > 0) {
-                    let text = emptyXong.length > 10 ? emptyXong.slice(0,10).join(', ') + '...' : emptyXong.join(', ');
-                    statusDiv.innerHTML = `<b class="text-red-600">🚨 PHÁT HIỆN LỖI LỚN:</b> Có <b>${emptyXong.length}</b> minh chứng đã tick "Xong" nhưng trong Drive không có file (hoặc sai tên thư mục)! (VD: <span class="text-xs text-red-500 font-mono">${text}</span>). Đề nghị rà soát ngay.`;
+                if (totalEmpty > 0) {
+                    let tcDetails = Object.keys(emptyByTC).map(tc => `<b>${tc}</b> (${emptyByTC[tc]} mục)`).join(', ');
+                    statusDiv.innerHTML = `<b class="text-red-600">🚨 CẢNH BÁO:</b> Có <b>${totalEmpty}</b> minh chứng đã đánh dấu "Xong" nhưng trong Drive thư mục lại trống trơn (hoặc sai tên)! Cụ thể: <span class="text-red-500">${tcDetails}</span>. Đề nghị rà soát ngay.`;
                     statusDiv.className = "mt-3 pt-3 border-t border-red-200 bg-red-50 p-2 rounded text-sm";
                 } else {
                     statusDiv.innerHTML = `<span class="text-green-600 font-medium">✅ Đã kiểm tra chéo Drive: 100% các mục báo "Xong" đều đã có file! Quá tuyệt vời!</span>`;
