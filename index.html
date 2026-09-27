@@ -588,8 +588,8 @@
 
                 if (totalEmpty > 0) {
                     let tcDetails = Object.keys(emptyByTC).map(tc => `<b>${tc}</b> (${emptyByTC[tc]} mục)`).join(', ');
-                    statusDiv.innerHTML = `<b class="text-red-600">🚨 CẢNH BÁO:</b> Có <b>${totalEmpty}</b> minh chứng đã đánh dấu "Xong" nhưng trong Drive thư mục lại trống trơn (hoặc sai tên)! Cụ thể: <span class="text-red-500">${tcDetails}</span>. Đề nghị rà soát ngay.`;
-                    statusDiv.className = "mt-3 pt-3 border-t border-red-200 bg-red-50 p-2 rounded text-sm";
+                    statusDiv.innerHTML = `<b class="text-orange-600">🔔 Lưu ý nhỏ:</b> Có <b>${totalEmpty}</b> minh chứng đã đánh dấu "Xong" nhưng chưa tìm thấy file trên Drive. Cụ thể: <span class="text-orange-500">${tcDetails}</span>. Kính đề nghị thầy cô kiểm tra lại.`;
+                    statusDiv.className = "mt-3 pt-3 border-t border-orange-200 bg-orange-50 p-2 rounded text-sm";
                 } else {
                     statusDiv.innerHTML = `<span class="text-green-600 font-medium">✅ Đã kiểm tra chéo Drive: 100% các mục báo "Xong" đều đã có file! Quá tuyệt vời!</span>`;
                 }
