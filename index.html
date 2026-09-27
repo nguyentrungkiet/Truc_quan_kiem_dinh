@@ -503,8 +503,13 @@
                 let changes = [];
                 let hasHistory = data.globalState && data.globalState.length > 0;
                 
-                // Nếu file Excel bị thêm/xóa dòng thì bỏ qua lần so sánh này để reset baseline
-                if (hasHistory && data.globalState.length === currentStateStr.length && currentStateStr !== data.globalState) {
+                // Nếu file Excel bị thêm/xóa dòng thì reset baseline
+                if (!hasHistory || (hasHistory && data.globalState.length !== currentStateStr.length)) {
+                    await fetch(historyUrl + "?action=log&message=" + encodeURIComponent("Đồng bộ lại cấu trúc dữ liệu mới") + "&state=" + encodeURIComponent(currentStateStr));
+                    if (!data.logs) data.logs = [];
+                    data.logs.unshift({time: new Date().toLocaleString('vi-VN'), message: "Đồng bộ lại cấu trúc dữ liệu mới"});
+                }
+                else if (currentStateStr !== data.globalState) {
                     for (let i = 0; i < dataList.length; i++) {
                         let oldChar = data.globalState[i];
                         let newChar = currentStateStr[i];
@@ -513,21 +518,13 @@
                             changes.push(`${dataList[i].MaMC} -> ${newStatus}`);
                         }
                     }
-                }
-
-                // Nếu có thay đổi, ghi log mới
-                if (changes.length > 0) {
-                    // Lấy tối đa 3 thay đổi để tránh câu log quá dài
-                    let logText = changes.length > 3 ? changes.slice(0, 3).join(', ') + ` và ${changes.length - 3} mục khác` : changes.join(', ');
-                    let message = "Cập nhật Excel: " + logText;
-                    await fetch(historyUrl + "?action=log&message=" + encodeURIComponent(message) + "&state=" + encodeURIComponent(currentStateStr));
-                    
-                    // Thêm log mới vào giao diện ngay lập tức để người dùng xem
-                    data.logs.unshift({time: new Date().toLocaleString('vi-VN'), message: message});
-                } else if (!hasHistory) {
-                    // Khởi tạo lần đầu
-                    await fetch(historyUrl + "?action=log&message=" + encodeURIComponent("Hệ thống bắt đầu ghi nhận dữ liệu") + "&state=" + encodeURIComponent(currentStateStr));
-                    data.logs.unshift({time: new Date().toLocaleString('vi-VN'), message: "Hệ thống bắt đầu ghi nhận dữ liệu"});
+                    if (changes.length > 0) {
+                        let logText = changes.length > 3 ? changes.slice(0, 3).join(', ') + ` và ${changes.length - 3} mục khác` : changes.join(', ');
+                        let message = "Cập nhật Excel: " + logText;
+                        await fetch(historyUrl + "?action=log&message=" + encodeURIComponent(message) + "&state=" + encodeURIComponent(currentStateStr));
+                        if (!data.logs) data.logs = [];
+                        data.logs.unshift({time: new Date().toLocaleString('vi-VN'), message: message});
+                    }
                 }
 
                 // Render giao diện Nhật ký
