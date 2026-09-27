@@ -589,7 +589,9 @@
             } catch(e) {
                 console.error("Lỗi khi quét Drive:", e);
                 let statusLi = document.getElementById('driveCheckStatus');
-                if(statusLi) statusLi.remove();
+                if(statusLi) {
+                    statusLi.innerHTML = `<span class="text-orange-500 font-medium">⚠️ Google Drive báo quá tải (Timeout) do thư mục chứa quá nhiều file. Hệ thống không thể quét xong trong 1 lần.</span>`;
+                }
             }
         }
 
