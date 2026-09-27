@@ -299,7 +299,7 @@
                 insightHtml += `<li><b>Hoàn thành tốt nhất:</b> ${bestTC.tc} đang dẫn đầu với tỷ lệ hoàn thành <b class="text-green-600">${(bestTC.rate*100).toFixed(1)}%</b>. (Phụ trách: ${phuTrach[bestTC.tc] || 'Chưa rõ'}).</li>`;
             }
             if (worstTC.missing > 0) {
-                insightHtml += `<li><b>Cần chú ý gấp:</b> ${worstTC.tc} đang có nhiều MC báo <span class="text-red-500 font-semibold">Tìm chưa có</span> hoặc bỏ trống nhất (<b>${worstTC.missing}</b> MC). Mong các thầy cô phụ trách (${phuTrach[worstTC.tc] || 'Chưa rõ'}) ưu tiên rà soát.</li>`;
+                insightHtml += `<li><b>Cần chú ý gấp:</b> ${worstTC.tc} đang có nhiều MC báo <span class="text-red-500 font-semibold">Tìm chưa có</span> hoặc bỏ trống nhất (<b>${worstTC.missing}</b> MC). Đề nghị thầy cô nhóm <b>(${phuTrach[worstTC.tc] || 'Chưa rõ'})</b> ưu tiên xử lý.</li>`;
             }
             if (statusCounts["Chưa đủ"] > 0) {
                 insightHtml += `<li><b>Cần bổ sung:</b> Toàn hệ thống có <b>${statusCounts["Chưa đủ"]}</b> MC ở trạng thái "Chưa đủ", chiếm ${(statusCounts["Chưa đủ"]/total*100).toFixed(1)}%. Cần kiểm tra lại checklist.</li>`;

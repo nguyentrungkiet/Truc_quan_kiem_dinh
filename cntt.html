@@ -268,7 +268,7 @@
                 insightHtml += `<li><b>Dẫn đầu:</b> ${bestTC.tc} có tỷ lệ hoàn thành cao nhất (<b class="text-green-600">${(bestTC.rate*100).toFixed(1)}%</b>). Phụ trách: <b>${phuTrach[bestTC.tc]}</b>.</li>`;
             }
             if (worstTC.missing > 0) {
-                insightHtml += `<li><b>Cần đốc thúc:</b> ${worstTC.tc} đang có nhiều MC chưa có dấu 'x' (<b>${worstTC.missing}</b> MC). Đề nghị team <b>${phuTrach[worstTC.tc]}</b> ưu tiên xử lý.</li>`;
+                insightHtml += `<li><b>Cần đốc thúc:</b> ${worstTC.tc} đang có nhiều MC chưa có dấu 'x' (<b>${worstTC.missing}</b> MC). Đề nghị thầy cô nhóm <b>(${phuTrach[worstTC.tc] || 'Chưa rõ'})</b> ưu tiên xử lý.</li>`;
             }
             document.getElementById('quickInsights').innerHTML = insightHtml || "<li>Dữ liệu tốt.</li>";
 
