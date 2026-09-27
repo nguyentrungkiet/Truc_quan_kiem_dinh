@@ -67,15 +67,29 @@
             </div>
         </div>
 
-        <!-- Phân tích & Nhận định nhanh -->
-        <div class="bg-white border-l-4 border-yellow-400 p-5 rounded-lg shadow-sm">
-            <h3 class="text-lg font-bold text-gray-800 mb-3 flex items-center">
-                <svg class="w-6 h-6 text-yellow-500 mr-2" fill="currentColor" viewBox="0 0 20 20"><path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1h4v1a2 2 0 11-4 0zM12 14c.015-.34.208-.646.477-.859a4 4 0 10-4.954 0c.27.213.462.519.476.859h4.002z"></path></svg>
-                Trợ lý AI phân tích tiến độ
-            </h3>
-            <ul class="list-disc list-inside text-gray-700 space-y-2" id="quickInsights">
-                <!-- Nội dung tự động sinh bằng JS -->
-            </ul>
+        <!-- Phân tích & Nhật ký -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Nhận định nhanh AI -->
+            <div class="bg-white border-l-4 border-yellow-400 p-5 rounded-lg shadow-sm">
+                <h3 class="text-lg font-bold text-gray-800 mb-3 flex items-center">
+                    <svg class="w-6 h-6 text-yellow-500 mr-2" fill="currentColor" viewBox="0 0 20 20"><path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1h4v1a2 2 0 11-4 0zM12 14c.015-.34.208-.646.477-.859a4 4 0 10-4.954 0c.27.213.462.519.476.859h4.002z"></path></svg>
+                    Trợ lý AI phân tích tiến độ
+                </h3>
+                <ul class="list-disc list-inside text-gray-700 space-y-2" id="quickInsights">
+                    <!-- Nội dung tự động sinh bằng JS -->
+                </ul>
+            </div>
+
+            <!-- Nhật ký hệ thống -->
+            <div class="bg-white border-l-4 border-blue-400 p-5 rounded-lg shadow-sm flex flex-col">
+                <h3 class="text-lg font-bold text-gray-800 mb-3 flex items-center">
+                    <svg class="w-6 h-6 text-blue-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Nhật ký cập nhật toàn cầu
+                </h3>
+                <div class="overflow-y-auto max-h-40 pr-2 space-y-3" id="globalActivityLog">
+                    <div class="text-gray-500 italic text-sm">⏳ Đang đồng bộ lịch sử...</div>
+                </div>
+            </div>
         </div>
 
         <!-- KPI Cards -->
@@ -467,6 +481,72 @@
 
             // Chạy kiểm tra Drive ngầm (Không làm đứng giao diện)
             checkDriveFolders(dataList);
+
+            // Đồng bộ nhật ký hệ thống toàn cầu
+            syncGlobalHistory(tcStats, tcList);
+        }
+
+        async function syncGlobalHistory(tcStats, tcList) {
+            const historyUrl = "https://script.google.com/macros/s/AKfycbwRELNdLGpbcHuxU_NGwdNORCr93P0REVxlkpJGKDZ3ZXR1QyDiULCnsHTBTTb3zmc2/exec";
+            try {
+                // Fetch lịch sử
+                const res = await fetch(historyUrl);
+                const data = await res.json();
+                
+                // Trích xuất trạng thái cũ
+                let oldObj = {};
+                try { oldObj = JSON.parse(data.globalState || "{}"); } catch(e){}
+                
+                // Tính toán trạng thái hiện tại (số MC "Xong" của mỗi TC)
+                let currentObj = {};
+                tcList.forEach(tc => currentObj[tc] = tcStats[tc]['Xong'] || 0);
+                let currentStateStr = JSON.stringify(currentObj);
+                
+                // So sánh và tìm điểm khác biệt
+                let changes = [];
+                let hasHistory = Object.keys(oldObj).length > 0;
+                
+                if (hasHistory && currentStateStr !== data.globalState) {
+                    tcList.forEach(tc => {
+                        let oldVal = oldObj[tc] || 0;
+                        let newVal = currentObj[tc];
+                        if (newVal > oldVal) changes.push(`${tc} vừa thêm ${newVal - oldVal} MC "Xong"`);
+                        else if (newVal < oldVal) changes.push(`${tc} vừa giảm ${oldVal - newVal} MC "Xong"`);
+                    });
+                }
+
+                // Nếu có thay đổi, ghi log mới
+                if (changes.length > 0) {
+                    let message = "Cập nhật tiến độ: " + changes.join(', ');
+                    await fetch(historyUrl + "?action=log&message=" + encodeURIComponent(message) + "&state=" + encodeURIComponent(currentStateStr));
+                    
+                    // Thêm log mới vào giao diện ngay lập tức để người dùng xem
+                    data.logs.unshift({time: new Date().toLocaleString('vi-VN'), message: message});
+                } else if (!hasHistory) {
+                    // Khởi tạo lần đầu
+                    await fetch(historyUrl + "?action=log&message=" + encodeURIComponent("Hệ thống bắt đầu ghi nhận dữ liệu") + "&state=" + encodeURIComponent(currentStateStr));
+                    data.logs.unshift({time: new Date().toLocaleString('vi-VN'), message: "Hệ thống bắt đầu ghi nhận dữ liệu"});
+                }
+
+                // Render giao diện Nhật ký
+                let logHtml = "";
+                if (data.logs && data.logs.length > 0) {
+                    data.logs.slice(0, 10).forEach(log => {
+                        logHtml += `<div class="flex items-start text-sm border-b border-gray-100 pb-2">
+                            <span class="text-blue-500 font-medium whitespace-nowrap mr-3">${log.time.split(' ')[1]}</span>
+                            <span class="text-gray-700">${log.message}</span>
+                        </div>`;
+                    });
+                } else {
+                    logHtml = `<div class="text-gray-500 italic text-sm">Chưa có cập nhật nào gần đây.</div>`;
+                }
+                
+                document.getElementById('globalActivityLog').innerHTML = logHtml;
+
+            } catch (e) {
+                console.error("Lỗi đồng bộ nhật ký:", e);
+                document.getElementById('globalActivityLog').innerHTML = `<div class="text-red-500 text-sm">Không thể tải nhật ký.</div>`;
+            }
         }
 
         async function checkDriveFolders(dataList) {
