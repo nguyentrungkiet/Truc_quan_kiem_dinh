@@ -483,10 +483,10 @@
             checkDriveFolders(dataList);
 
             // Đồng bộ nhật ký hệ thống toàn cầu
-            syncGlobalHistory(tcStats, tcList);
+            syncGlobalHistory(dataList);
         }
 
-        async function syncGlobalHistory(tcStats, tcList) {
+        async function syncGlobalHistory(dataList) {
             const historyUrl = "https://script.google.com/macros/s/AKfycbwRELNdLGpbcHuxU_NGwdNORCr93P0REVxlkpJGKDZ3ZXR1QyDiULCnsHTBTTb3zmc2/exec";
             try {
                 // Fetch lịch sử
@@ -497,9 +497,11 @@
                 let oldObj = {};
                 try { oldObj = JSON.parse(data.globalState || "{}"); } catch(e){}
                 
-                // Tính toán trạng thái hiện tại (số MC "Xong" của mỗi TC)
+                // Trạng thái hiện tại của TỪNG Mã Minh Chứng
                 let currentObj = {};
-                tcList.forEach(tc => currentObj[tc] = tcStats[tc]['Xong'] || 0);
+                dataList.forEach(item => {
+                    if (item.MaMC) currentObj[item.MaMC] = item.TrangThai;
+                });
                 let currentStateStr = JSON.stringify(currentObj);
                 
                 // So sánh và tìm điểm khác biệt
@@ -507,17 +509,19 @@
                 let hasHistory = Object.keys(oldObj).length > 0;
                 
                 if (hasHistory && currentStateStr !== data.globalState) {
-                    tcList.forEach(tc => {
-                        let oldVal = oldObj[tc] || 0;
-                        let newVal = currentObj[tc];
-                        if (newVal > oldVal) changes.push(`${tc} vừa thêm ${newVal - oldVal} MC "Xong"`);
-                        else if (newVal < oldVal) changes.push(`${tc} vừa giảm ${oldVal - newVal} MC "Xong"`);
-                    });
+                    for (const [maMC, newStatus] of Object.entries(currentObj)) {
+                        let oldStatus = oldObj[maMC] || "Trống";
+                        if (oldStatus !== newStatus) {
+                            changes.push(`${maMC} -> ${newStatus}`);
+                        }
+                    }
                 }
 
                 // Nếu có thay đổi, ghi log mới
                 if (changes.length > 0) {
-                    let message = "Cập nhật tiến độ: " + changes.join(', ');
+                    // Lấy tối đa 3 thay đổi để tránh câu log quá dài
+                    let logText = changes.length > 3 ? changes.slice(0, 3).join(', ') + ` và ${changes.length - 3} mục khác` : changes.join(', ');
+                    let message = "Cập nhật Excel: " + logText;
                     await fetch(historyUrl + "?action=log&message=" + encodeURIComponent(message) + "&state=" + encodeURIComponent(currentStateStr));
                     
                     // Thêm log mới vào giao diện ngay lập tức để người dùng xem
