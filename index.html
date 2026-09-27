@@ -78,6 +78,7 @@
                 <ul class="list-disc list-inside text-gray-700 space-y-2" id="quickInsights">
                     <!-- Nội dung tự động sinh bằng JS -->
                 </ul>
+                <div id="driveCheckStatus" class="mt-3 pt-3 border-t border-gray-100 text-sm"></div>
             </div>
 
             <!-- Nhật ký hệ thống -->
@@ -551,11 +552,9 @@
         async function checkDriveFolders(dataList) {
             const gasUrl = "https://script.google.com/macros/s/AKfycbwenf7gsm6dwlr-cOYWSRCPKEeR8oaYHdAalk5LRzdwAdKcqqTZSxWzbQlj8o7h1IVS/exec";
             try {
-                let ul = document.getElementById('quickInsights');
-                let li = document.createElement('li');
-                li.id = 'driveCheckStatus';
-                li.innerHTML = `<span class="text-blue-500 font-medium italic">⏳ AI đang soi vào thư mục Google Drive để kiểm tra chéo file thực tế...</span>`;
-                ul.appendChild(li);
+                let statusDiv = document.getElementById('driveCheckStatus');
+                statusDiv.innerHTML = `<span class="text-blue-500 font-medium italic">⏳ AI đang soi vào thư mục Google Drive để kiểm tra chéo file thực tế...</span>`;
+                statusDiv.className = "mt-3 pt-3 border-t border-gray-100 text-sm"; // Reset class
 
                 const response = await fetch(gasUrl);
                 const driveData = await response.json();
@@ -573,21 +572,18 @@
                     }
                 });
 
-                let statusLi = document.getElementById('driveCheckStatus');
-                if (!statusLi) return;
-                
                 if (emptyXong.length > 0) {
                     let text = emptyXong.length > 10 ? emptyXong.slice(0,10).join(', ') + '...' : emptyXong.join(', ');
-                    statusLi.innerHTML = `<b class="text-red-600">🚨 PHÁT HIỆN LỖI LỚN:</b> Có <b>${emptyXong.length}</b> minh chứng đã tick "Xong" nhưng trong Drive không có file (hoặc sai tên thư mục)! (VD: <span class="text-xs text-red-500 font-mono">${text}</span>). Đề nghị các nhóm rà soát ngay.`;
-                    statusLi.className = "bg-red-50 p-2 rounded border border-red-200 mt-2";
+                    statusDiv.innerHTML = `<b class="text-red-600">🚨 PHÁT HIỆN LỖI LỚN:</b> Có <b>${emptyXong.length}</b> minh chứng đã tick "Xong" nhưng trong Drive không có file (hoặc sai tên thư mục)! (VD: <span class="text-xs text-red-500 font-mono">${text}</span>). Đề nghị rà soát ngay.`;
+                    statusDiv.className = "mt-3 pt-3 border-t border-red-200 bg-red-50 p-2 rounded text-sm";
                 } else {
-                    statusLi.innerHTML = `<span class="text-green-600 font-medium">✅ Đã kiểm tra chéo Drive: 100% các mục báo "Xong" đều đã có file! Quá tuyệt vời!</span>`;
+                    statusDiv.innerHTML = `<span class="text-green-600 font-medium">✅ Đã kiểm tra chéo Drive: 100% các mục báo "Xong" đều đã có file! Quá tuyệt vời!</span>`;
                 }
             } catch(e) {
                 console.error("Lỗi khi quét Drive:", e);
-                let statusLi = document.getElementById('driveCheckStatus');
-                if(statusLi) {
-                    statusLi.innerHTML = `<span class="text-orange-500 font-medium">⚠️ Google Drive báo quá tải (Timeout) do thư mục chứa quá nhiều file. Hệ thống không thể quét xong trong 1 lần.</span>`;
+                let statusDiv = document.getElementById('driveCheckStatus');
+                if(statusDiv) {
+                    statusDiv.innerHTML = `<span class="text-orange-500 font-medium">⚠️ Google Drive báo quá tải (Timeout) do thư mục chứa quá nhiều file. Hệ thống không thể quét xong trong 1 lần.</span>`;
                 }
             }
         }
