@@ -493,26 +493,24 @@
                 const res = await fetch(historyUrl);
                 const data = await res.json();
                 
-                // Trích xuất trạng thái cũ
-                let oldObj = {};
-                try { oldObj = JSON.parse(data.globalState || "{}"); } catch(e){}
+                // Nén toàn bộ trạng thái 466 MC thành chuỗi 466 ký tự (0: Trống, 1: Xong, 2: Chưa đủ)
+                let currentStateStr = dataList.map(item => {
+                    if (item.TrangThai === 'Xong') return '1';
+                    if (item.TrangThai === 'Chưa đủ') return '2';
+                    return '0';
+                }).join('');
                 
-                // Trạng thái hiện tại của TỪNG Mã Minh Chứng
-                let currentObj = {};
-                dataList.forEach(item => {
-                    if (item.MaMC) currentObj[item.MaMC] = item.TrangThai;
-                });
-                let currentStateStr = JSON.stringify(currentObj);
-                
-                // So sánh và tìm điểm khác biệt
                 let changes = [];
-                let hasHistory = Object.keys(oldObj).length > 0;
+                let hasHistory = data.globalState && data.globalState.length > 0;
                 
-                if (hasHistory && currentStateStr !== data.globalState) {
-                    for (const [maMC, newStatus] of Object.entries(currentObj)) {
-                        let oldStatus = oldObj[maMC] || "Trống";
-                        if (oldStatus !== newStatus) {
-                            changes.push(`${maMC} -> ${newStatus}`);
+                // Nếu file Excel bị thêm/xóa dòng thì bỏ qua lần so sánh này để reset baseline
+                if (hasHistory && data.globalState.length === currentStateStr.length && currentStateStr !== data.globalState) {
+                    for (let i = 0; i < dataList.length; i++) {
+                        let oldChar = data.globalState[i];
+                        let newChar = currentStateStr[i];
+                        if (oldChar !== newChar) {
+                            let newStatus = newChar === '1' ? 'Xong' : (newChar === '2' ? 'Chưa đủ' : 'Trống');
+                            changes.push(`${dataList[i].MaMC} -> ${newStatus}`);
                         }
                     }
                 }
