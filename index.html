@@ -532,7 +532,7 @@
                 if (data.logs && data.logs.length > 0) {
                     data.logs.slice(0, 10).forEach(log => {
                         logHtml += `<div class="flex items-start text-sm border-b border-gray-100 pb-2">
-                            <span class="text-blue-500 font-medium whitespace-nowrap mr-3">${log.time.split(' ')[1]}</span>
+                            <span class="text-blue-500 font-medium whitespace-nowrap mr-3">${log.time}</span>
                             <span class="text-gray-700">${log.message}</span>
                         </div>`;
                     });
