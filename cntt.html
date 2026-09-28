@@ -63,13 +63,29 @@
             </div>
         </div>
 
-        <!-- Phân tích & Nhận định nhanh -->
-        <div class="bg-white border-l-4 border-yellow-400 p-5 rounded-lg shadow-sm">
-            <h3 class="text-lg font-bold text-gray-800 mb-3 flex items-center">
-                <svg class="w-6 h-6 text-yellow-500 mr-2" fill="currentColor" viewBox="0 0 20 20"><path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1h4v1a2 2 0 11-4 0zM12 14c.015-.34.208-.646.477-.859a4 4 0 10-4.954 0c.27.213.462.519.476.859h4.002z"></path></svg>
-                Trợ lý AI phân tích tiến độ CNTT
-            </h3>
-            <ul class="list-disc list-inside text-gray-700 space-y-2" id="quickInsights"></ul>
+        <!-- Phân tích & Nhật ký -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <!-- Nhận định nhanh AI -->
+            <div class="bg-white border-l-4 border-yellow-400 p-5 rounded-lg shadow-sm">
+                <h3 class="text-lg font-bold text-gray-800 mb-3 flex items-center">
+                    <svg class="w-6 h-6 text-yellow-500 mr-2" fill="currentColor" viewBox="0 0 20 20"><path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1h4v1a2 2 0 11-4 0zM12 14c.015-.34.208-.646.477-.859a4 4 0 10-4.954 0c.27.213.462.519.476.859h4.002z"></path></svg>
+                    Trợ lý AI phân tích tiến độ CNTT
+                </h3>
+                <ul class="list-disc list-inside text-gray-700 space-y-2" id="quickInsights"></ul>
+                <!-- Khối hiển thị kết quả kiểm tra chéo Google Drive -->
+                <div id="driveCheckStatus" class="mt-3 pt-3 border-t border-gray-100 text-sm"></div>
+            </div>
+
+            <!-- Nhật ký hệ thống -->
+            <div class="bg-white border-l-4 border-teal-400 p-5 rounded-lg shadow-sm flex flex-col">
+                <h3 class="text-lg font-bold text-gray-800 mb-3 flex items-center">
+                    <svg class="w-6 h-6 text-teal-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Nhật ký cập nhật
+                </h3>
+                <div class="overflow-y-auto max-h-40 pr-2 space-y-3" id="globalActivityLog">
+                    <div class="text-gray-500 italic text-sm">⏳ Đang đồng bộ lịch sử...</div>
+                </div>
+            </div>
         </div>
 
         <!-- KPI Cards -->
@@ -205,7 +221,7 @@
                         }
                     }
 
-                    dataList.push({ TieuChuan: tieuChuan, TieuChi: currentTieuChi, TrangThai: status });
+                    dataList.push({ TieuChuan: tieuChuan, TieuChi: currentTieuChi, MaMC: String(maMcCell).trim(), TrangThai: status });
                 }
             }
             renderDashboard(dataList);
@@ -272,6 +288,12 @@
                 insightHtml += `<li><b>Cần đốc thúc:</b> ${worstTC.tc} đang có nhiều MC chưa có dấu 'x' (<b>${worstTC.missing}</b> MC). Đề nghị thầy cô nhóm <b>(${phuTrach[worstTC.tc] || 'Chưa rõ'})</b> ưu tiên xử lý.</li>`;
             }
             document.getElementById('quickInsights').innerHTML = insightHtml || "<li>Dữ liệu tốt.</li>";
+
+            // Chạy kiểm tra Drive ngầm (Không làm đọng giao diện)
+            checkDriveFolders(dataList);
+
+            // Đồng bộ nhật ký hệ thống toàn cầu
+            syncGlobalHistory(dataList);
 
             // Deltas
             let history = JSON.parse(localStorage.getItem('cntt_history') || 'null');
@@ -365,6 +387,121 @@
 
             document.getElementById('loading').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
+        }
+
+        async function syncGlobalHistory(dataList) {
+            const historyUrl = "https://script.google.com/macros/s/AKfycbwRELNdLGpbcHuxU_NGwdNORCr93P0REVxlkpJGKDZ3ZXR1QyDiULCnsHTBTTb3zmc2/exec?type=cntt";
+            try {
+                // Fetch lịch sử
+                const res = await fetch(historyUrl);
+                const data = await res.json();
+                
+                // Nén toàn bộ trạng thái thành chuỗi
+                let currentStateStr = dataList.map(item => {
+                    if (item.TrangThai === 'Xong') return '1';
+                    if (item.TrangThai === 'Chưa đủ' || item.TrangThai === 'Ghi chú') return '2';
+                    return '0';
+                }).join('');
+                
+                let changes = [];
+                let hasHistory = data.globalState && data.globalState.length > 0;
+                
+                // Nếu file Word bị thêm/xóa dòng thì reset baseline
+                if (!hasHistory || (hasHistory && data.globalState.length !== currentStateStr.length)) {
+                    await fetch(historyUrl + "&action=log&message=" + encodeURIComponent("Đồng bộ lại cấu trúc dữ liệu mới") + "&state=" + encodeURIComponent(currentStateStr));
+                    if (!data.logs) data.logs = [];
+                    data.logs.unshift({time: new Date().toLocaleString('vi-VN'), message: "Đồng bộ lại cấu trúc dữ liệu mới"});
+                }
+                else if (currentStateStr !== data.globalState) {
+                    for (let i = 0; i < dataList.length; i++) {
+                        let oldChar = data.globalState[i];
+                        let newChar = currentStateStr[i];
+                        if (oldChar !== newChar) {
+                            let newStatus = newChar === '1' ? 'Xong' : (newChar === '2' ? 'Ghi chú' : 'Trống');
+                            changes.push(`${dataList[i].MaMC || 'Mục ' + i} -> ${newStatus}`);
+                        }
+                    }
+                    if (changes.length > 0) {
+                        let logText = changes.length > 3 ? changes.slice(0, 3).join(', ') + ` và ${changes.length - 3} mục khác` : changes.join(', ');
+                        let message = "Cập nhật Word: " + logText;
+                        await fetch(historyUrl + "&action=log&message=" + encodeURIComponent(message) + "&state=" + encodeURIComponent(currentStateStr));
+                        if (!data.logs) data.logs = [];
+                        data.logs.unshift({time: new Date().toLocaleString('vi-VN'), message: message});
+                    }
+                }
+
+                // Render giao diện Nhật ký
+                let logHtml = "";
+                if (data.logs && data.logs.length > 0) {
+                    data.logs.slice(0, 10).forEach(log => {
+                        logHtml += `<div class="flex items-start text-sm border-b border-gray-100 pb-2">
+                            <span class="text-teal-500 font-medium whitespace-nowrap mr-3">${log.time}</span>
+                            <span class="text-gray-700">${log.message}</span>
+                        </div>`;
+                    });
+                } else {
+                    logHtml = `<div class="text-gray-500 italic text-sm">Chưa có cập nhật nào gần đây.</div>`;
+                }
+                
+                document.getElementById('globalActivityLog').innerHTML = logHtml;
+
+            } catch (e) {
+                console.error("Lỗi đồng bộ nhật ký:", e);
+                document.getElementById('globalActivityLog').innerHTML = `<div class="text-red-500 text-sm">Không thể tải nhật ký.</div>`;
+            }
+        }
+
+        async function checkDriveFolders(dataList) {
+            const gasUrl = "https://script.google.com/macros/s/AKfycbwHh336-eERDnkTJ_l6omcX3_JOc_7e6Pa1Vvy6-9k6wi1zI1Q0T1t8AtVb0RvyJ9ns/exec?type=cntt";
+            try {
+                let statusDiv = document.getElementById('driveCheckStatus');
+                statusDiv.innerHTML = `<span class="text-teal-500 font-medium italic">⏳ AI đang soi vào thư mục Google Drive để kiểm tra chéo file thực tế...</span>`;
+                statusDiv.className = "mt-3 pt-3 border-t border-gray-100 text-sm"; // Reset class
+
+                const response = await fetch(gasUrl);
+                const driveData = await response.json();
+                
+                if(driveData.error) {
+                    if (driveData.error.includes("Đang quét lần đầu")) {
+                        statusDiv.innerHTML = `<span class="text-teal-500 font-medium">🔄 AI đang tiến hành đếm file ngầm lần đầu tiên. Dữ liệu sẽ tự động có sau vài phút...</span>`;
+                        statusDiv.className = "mt-3 pt-3 border-t border-teal-200 bg-teal-50 p-2 rounded text-sm";
+                        return;
+                    }
+                    throw new Error(driveData.error);
+                }
+
+                let emptyByTC = {};
+                let totalEmpty = 0;
+                
+                dataList.forEach(item => {
+                    if (item.TrangThai === 'Xong') {
+                        let count = driveData[item.MaMC];
+                        // Nếu API trả về 0 file (hoặc không tìm thấy thư mục)
+                        if (count === 0 || count === undefined) {
+                            let tcMatch = item.MaMC ? item.MaMC.match(/^[a-zA-Z]*(\d+)/) : null;
+                            if (tcMatch) {
+                                let tc = "TC" + tcMatch[1];
+                                emptyByTC[tc] = (emptyByTC[tc] || 0) + 1;
+                                totalEmpty++;
+                            }
+                        }
+                    }
+                });
+
+                if (totalEmpty > 0) {
+                    let tcDetails = Object.keys(emptyByTC).map(tc => `<b>${tc}</b> (${emptyByTC[tc]} mục)`).join(', ');
+                    statusDiv.innerHTML = `<b class="text-orange-600">🔔 Lưu ý nhỏ:</b> Có <b>${totalEmpty}</b> minh chứng đã đánh dấu "Xong" nhưng chưa tìm thấy file trên Drive. Cụ thể: <span class="text-orange-500">${tcDetails}</span>. Kính đề nghị thầy cô kiểm tra lại.`;
+                    statusDiv.className = "mt-3 pt-3 border-t border-orange-200 bg-orange-50 p-2 rounded text-sm";
+                } else {
+                    statusDiv.innerHTML = `<span class="text-green-600 font-medium">✅ Đã kiểm tra chéo Drive: 100% các mục báo "Xong" đều đã có file! Quá tuyệt vời!</span>`;
+                }
+            } catch(e) {
+                console.error("Lỗi khi quét Drive:", e);
+                let statusDiv = document.getElementById('driveCheckStatus');
+                if(statusDiv) {
+                    statusDiv.innerHTML = `<span class="text-orange-500 font-medium">⚠️ Google Drive báo quá tải (Timeout) do thư mục chứa quá nhiều file. Hệ thống không thể quét xong trong 1 lần.</span>`;
+                }
+            }
         }
 
         window.onload = () => { loadData(); setInterval(loadData, 180000); };
